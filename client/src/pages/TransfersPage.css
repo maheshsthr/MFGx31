@@ -1,0 +1,124 @@
+.transfers-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.transfers-filters {
+  display: flex;
+  gap: 4px;
+}
+
+.transfers-filter {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  transition: all 0.15s;
+}
+
+.transfers-filter:hover {
+  background: var(--card);
+  color: var(--text-secondary);
+}
+
+.transfers-filter.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.transfers-new {
+  padding: 10px 20px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.transfers-new:hover {
+  background: var(--primary-light);
+}
+
+.transfers-table-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.transfers-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.transfers-table thead {
+  background: var(--bg);
+}
+
+.transfers-table th {
+  padding: 12px 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.transfers-table td {
+  padding: 14px 20px;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.transfers-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.transfers-table tbody tr:hover {
+  background: rgba(0,0,0,0.01);
+}
+
+@media (max-width: 768px) {
+  .transfers-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .transfers-filters {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    width: 100%;
+    padding-bottom: 4px;
+  }
+
+  .transfers-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .transfers-filter {
+    white-space: nowrap;
+  }
+
+  .transfers-new {
+    width: 100%;
+    text-align: center;
+  }
+
+  .transfers-table-card {
+    overflow-x: auto;
+  }
+
+  .transfers-table {
+    min-width: 600px;
+  }
+}

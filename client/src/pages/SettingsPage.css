@@ -1,0 +1,493 @@
+.settings {
+  max-width: 720px;
+}
+
+/* ===== Header ===== */
+.settings-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.settings-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.settings-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* ===== Sections ===== */
+.settings-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
+.settings-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.settings-section-title.danger {
+  color: var(--red);
+}
+
+.settings-section-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* ===== Edit Profile ===== */
+.settings-edit-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg);
+  transition: all 0.2s;
+}
+
+.settings-edit-btn:hover {
+  border-color: #ccc;
+}
+
+.settings-edit-panel {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.settings-field label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.settings-field input {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.settings-field input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(15, 15, 15, 0.06);
+}
+
+.settings-save-btn {
+  padding: 8px 18px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.settings-save-btn:hover {
+  background: var(--primary-light);
+}
+
+/* ===== Danger Zone ===== */
+.settings-danger {
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.settings-danger-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.settings-danger-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.settings-danger-item h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.settings-danger-item p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.settings-danger-btn {
+  padding: 8px 18px;
+  background: var(--red);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.settings-danger-btn:hover {
+  opacity: 0.9;
+}
+
+.settings-danger-btn.outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.settings-danger-btn.outline:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* ===== Ownership Inline (inside danger zone) ===== */
+.settings-ownership-inline {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.settings-ownership-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.settings-add-partner-btn {
+  padding: 6px 14px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.settings-add-partner-btn:hover {
+  background: var(--primary-light);
+}
+
+/* ===== Owner Cards Grid ===== */
+.settings-owners-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.settings-owner-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  background: var(--bg);
+}
+
+.settings-owner-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.settings-owner-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.settings-owner-info h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.settings-owner-role {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.settings-owner-contact {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+/* ===== Share Bar ===== */
+.settings-owner-share {
+  margin-bottom: 12px;
+}
+
+.settings-share-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.settings-share-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.settings-share-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ===== Owner Actions ===== */
+.settings-owner-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-owner-action-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  transition: all 0.15s;
+}
+
+.settings-owner-action-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.settings-owner-action-btn.danger {
+  color: var(--red);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.settings-owner-action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: var(--red);
+}
+
+/* ===== Ownership Total Bar ===== */
+.settings-ownership-total {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.settings-total-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-total-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.settings-total-segment {
+  height: 100%;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.settings-total-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* ===== Modals ===== */
+.settings-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.settings-modal {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.15);
+}
+
+.settings-modal h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+.settings-modal p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.settings-modal-danger {
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.settings-modal-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 0;
+}
+
+.settings-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.settings-modal-cancel {
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg);
+  transition: all 0.2s;
+}
+
+.settings-modal-cancel:hover {
+  border-color: #ccc;
+}
+
+.settings-modal-save {
+  padding: 8px 18px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.settings-modal-save:hover {
+  background: var(--primary-light);
+}
+
+.settings-modal-delete {
+  padding: 8px 18px;
+  background: var(--red);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.settings-modal-delete:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .settings-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .settings-section {
+    padding: 18px;
+  }
+
+  .settings-section-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .settings-owners-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-danger-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .settings-danger-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .settings-modal {
+    margin: 16px;
+    padding: 24px;
+  }
+
+  .settings-modal-row {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-ownership-header-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .settings-add-partner-btn {
+    width: 100%;
+    text-align: center;
+  }
+}

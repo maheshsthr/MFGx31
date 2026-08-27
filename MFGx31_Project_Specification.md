@@ -53,6 +53,44 @@ always logged with a full audit trail.
 
 Auth handled via **Supabase Auth** (email/password to start; can extend to magic link/OAuth later). Role and `department_id` stored in a `profiles` table linked to `auth.users`.
 
+### 3.1 Account Creation Workflow (IMPORTANT for backend)
+
+There is **no public/direct sign-up for department accounts**. Department accounts
+are **provisioned exclusively by an Admin** from within the app:
+
+**Admin flow:**
+1. Admin (Org Owner) logs in with their own account.
+2. Goes to **Departments → Add Department**.
+3. While creating a department, the Admin **allots the department an email + password**
+   (and designates a head/manager name).
+4. On save, the backend:
+   - creates the `departments` row, **and**
+   - creates a Supabase Auth user with the alloted email/password, with
+     `role = 'department_head'` and `department_id = <new dept id>` in `profiles`.
+5. The Admin shares the email/password with the department head out-of-band (in-app
+   display / manual handover).
+
+**Department head flow:**
+- The department head logs in using the email/password allotted by the Admin.
+- Login lands them directly on their own department dashboard (scoped to their
+  `department_id`).
+
+**Sign-up is only for Org Owners (Admin):**
+- Public `/signup` creates an `organizations` row plus the first Admin profile.
+- It does **not** create departments or department accounts — those are always created
+  by an Admin later via "Add Department".
+
+**Backend implications:**
+- Department-account provisioning must call the **Supabase Admin / Server-side Auth API**
+  (not the standard public sign-up client call), because the email+password are chosen
+  by the Admin on behalf of another user.
+- Enforce at the API level: only `role = 'admin'` users may create departments /
+  provision department accounts. Dept heads must never be able to create other
+  department accounts.
+- Store allotted passwords securely (hashed by Supabase Auth); do not store plaintext.
+- Validate that the allotted email is unique across the platform (Supabase Auth enforces
+  unique email on the auth.users email).
+
 ---
 
 ## 4. Database Schema (Supabase / Postgres)
