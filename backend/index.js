@@ -1,10 +1,14 @@
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { createApp } from './src/app.js';
 
 const app = createApp();
 
+// Compare the resolved filesystem paths. process.argv[1] is a plain path on most
+// runtimes (e.g. Windows), so we must NOT run fileURLToPath() on it (that would
+// throw ERR_INVALID_URL_SCHEME); resolve() handles both forms.
 const isDirectRun =
-  process.argv[1] && import.meta.url === fileURLToPath(process.argv[1]).href;
+  process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
 
 // Only listen when run directly (local `node index.js`).
 // When Vercel imports this module as a serverless Function it must NOT bind a
