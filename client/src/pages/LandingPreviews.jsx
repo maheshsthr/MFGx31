@@ -27,11 +27,33 @@ function PreviewFrame({ children, scale = 0.55 }) {
   );
 }
 
+function LpBell({ size = 15, badge }) {
+  return (
+    <span className="lp-bell-svg">
+      <svg
+        viewBox="0 0 24 24"
+        width={size}
+        height={size}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+      {badge > 0 && <span className="lp-bell-badge">{badge > 99 ? '99+' : badge}</span>}
+    </span>
+  );
+}
+
 function PreviewSidebar({ active }) {
   const items = [
     { icon: '◈', label: 'Dashboard', key: 'dash' },
     { icon: '⬡', label: 'Departments', key: 'dept' },
     { icon: '⇄', label: 'Transfers', key: 'transfers' },
+    { bell: true, label: 'Notifications', key: 'notif' },
     { icon: '⚙', label: 'Settings', key: 'set' },
   ];
   return (
@@ -43,7 +65,7 @@ function PreviewSidebar({ active }) {
       <div className="lp-sidebar-nav">
         {items.map((it) => (
           <div key={it.key} className={`lp-sidebar-item ${it.key === active ? 'active' : ''}`}>
-            <span className="lp-sidebar-icon">{it.icon}</span>
+            <span className="lp-sidebar-icon">{it.bell ? <LpBell /> : it.icon}</span>
             <span>{it.label}</span>
           </div>
         ))}
@@ -59,7 +81,7 @@ function PreviewSidebar({ active }) {
   );
 }
 
-function PreviewTopbar({ title }) {
+function PreviewTopbar({ title, badge }) {
   return (
     <div className="lp-topbar">
       <div className="lp-welcome">
@@ -70,7 +92,7 @@ function PreviewTopbar({ title }) {
           <span>⌕</span>
           <input readOnly placeholder="Search..." />
         </div>
-        <div className="lp-bell">🔔</div>
+        <LpBell badge={badge} />
       </div>
     </div>
   );
@@ -291,4 +313,75 @@ function SettingsPreview() {
   );
 }
 
-export { PreviewFrame, DashboardPreview, DepartmentsPreview, SettingsPreview };
+/* ===== NOTIFICATIONS REPLICA (page + bell popup) ===== */
+function NotificationsPreview() {
+  const items = [
+    { title: 'Administrator moved an asset', msg: 'Rajesh Kumar moved Rapier Loom #1 to your department.', time: '2 min ago', unread: true },
+    { title: 'New employees added', msg: 'Amit Sharma added 3 workers to Weaving.', time: '1 hr ago', unread: true },
+    { title: 'Transfer request approved', msg: 'Your transfer of Jet Dyeing Machine was approved.', time: '3 hr ago', unread: false },
+    { title: 'Machinery moved to maintenance', msg: 'Power Loom #3 was marked for maintenance.', time: 'Yesterday', unread: false },
+    { title: 'Document uploaded', msg: 'SOP — Fabric Dyeing was uploaded.', time: '2 days ago', unread: false },
+  ];
+  const popupItems = items.slice(0, 5);
+  return (
+    <div className="lp-page">
+      <PreviewSidebar active="notif" />
+      <div className="lp-main">
+        <PreviewTopbar title="Notifications" badge={3} />
+        <div className="lp-content lp-notif-layout">
+          {/*
+            Left: the full notifications page.
+            Right: the bell dropdown popup, shown open as a floating card.
+          */}
+          <div className="lp-notif-page">
+            <div className="lp-notif-head">
+              <div>
+                <div className="lp-notif-title">Notifications</div>
+                <span className="lp-muted">3 unread</span>
+              </div>
+              <div className="lp-notif-actions">
+                <span className="lp-outline-btn">Mark all read</span>
+                <span className="lp-notif-clear">Clear all</span>
+              </div>
+            </div>
+            <div className="lp-notif-list">
+              {items.map((n) => (
+                <div key={n.title} className={`lp-notif-item ${n.unread ? 'unread' : ''}`}>
+                  <span className="lp-notif-dot" />
+                  <div className="lp-notif-body">
+                    <div className="lp-notif-row">
+                      <span className="lp-notif-item-title">{n.title}</span>
+                      <span className="lp-muted">{n.time}</span>
+                    </div>
+                    <span className="lp-notif-msg">{n.msg}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="lp-notif-popup">
+            <div className="lp-popup-head">
+              <strong className="lp-popup-title">Notifications</strong>
+              <span className="lp-popup-markall">Mark all read</span>
+            </div>
+            <div className="lp-popup-list">
+              {popupItems.map((n) => (
+                <div key={n.title} className={`lp-popup-item ${n.unread ? 'unread' : ''}`}>
+                  <span className="lp-notif-dot" />
+                  <div className="lp-notif-body">
+                    <span className="lp-popup-item-title">{n.title}</span>
+                    <span className="lp-popup-item-time">{n.time}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="lp-popup-foot">View all →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export { PreviewFrame, DashboardPreview, DepartmentsPreview, SettingsPreview, NotificationsPreview };

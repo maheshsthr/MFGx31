@@ -48,6 +48,7 @@
   padding: 24px;
   display: flex;
   flex-direction: column;
+  position: relative;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -61,6 +62,47 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+  padding-right: 70px;
+}
+
+.dept-card-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.dept-card:hover .dept-card-actions {
+  opacity: 1;
+}
+
+.dept-card-action {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.dept-card-action:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.dept-card-action.danger:hover {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
 }
 
 .dept-card-icon {
@@ -94,6 +136,15 @@
   color: var(--text-secondary);
   line-height: 1.5;
   flex: 1;
+  margin-bottom: 6px;
+}
+
+.dept-card-address {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
   margin-bottom: 16px;
 }
 
@@ -167,7 +218,7 @@
   color: var(--text);
   background: var(--bg);
   outline: none;
-  resize: vertical;
+  resize: none;
 }
 
 .modal-field input:focus,

@@ -64,11 +64,17 @@
   font-weight: 600;
 }
 
-.sidebar-nav-icon {
+  .sidebar-nav-icon {
   font-size: 1rem;
   width: 20px;
   text-align: center;
   flex-shrink: 0;
+}
+
+.sidebar-nav-icon .sidebar-bell-icon {
+  display: inline-flex;
+  vertical-align: middle;
+  color: inherit;
 }
 
 .sidebar-footer {

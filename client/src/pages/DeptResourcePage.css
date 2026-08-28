@@ -1,0 +1,106 @@
+.dept-resource-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.dept-resource-count {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.dept-resource-add {
+  background: var(--primary);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.dept-resource-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.dept-resource-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dept-resource-table thead th {
+  text-align: left;
+  padding: 14px 20px;
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dept-resource-table tbody td {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
+.dept-resource-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.dept-td-name {
+  font-weight: 600;
+}
+
+.dept-td-muted {
+  color: var(--text-secondary);
+}
+
+.dept-td-qty {
+  font-weight: 600;
+}
+
+.dept-status-text {
+  font-weight: 600;
+}
+.dept-status-text.green { color: var(--green); }
+.dept-status-text.amber { color: var(--amber); }
+.dept-status-text.red { color: var(--red); }
+.dept-status-text.muted { color: var(--text-secondary); }
+
+.dept-td-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.td-menu {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  transition: all 0.15s;
+}
+
+.td-menu:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.td-menu.danger:hover {
+  color: var(--red);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.td-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px 16px;
+}

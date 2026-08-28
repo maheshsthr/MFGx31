@@ -1,8 +1,20 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { catchAsync, fail } from '../middleware/catchAsync.js';
+import { notify } from '../lib/notifications.js';
 
 const router = Router();
+
+/** Fetch a department's name (for notification messages). */
+async function deptName(deptId) {
+  if (!deptId) return 'Department';
+  const { data } = await supabaseAdmin
+    .from('departments')
+    .select('name')
+    .eq('id', deptId)
+    .maybeSingle();
+  return data?.name || 'Department';
+}
 
 /** Verify a department belongs to the caller's organization. */
 async function departmentInOrg(deptId, orgId) {
@@ -105,6 +117,22 @@ router.post(
       .select()
       .single();
     if (error) return fail(res, 500, error.message);
+
+    const dName = await deptName(dept.id);
+    const actorIsAdmin = req.user.role === 'admin';
+    notify({
+      organization_id: req.user.organization_id,
+      actor: req.user,
+      type: actorIsAdmin ? 'employee.created.admin' : 'employee.created',
+      title: actorIsAdmin ? 'Employee added' : 'New employee added',
+      message: actorIsAdmin
+        ? `Employee "${data.name}" added to ${dName}.`
+        : `${dName} added employee "${data.name}".`,
+      entity_type: 'employee',
+      entity_id: data.id,
+      link: '/employees',
+    });
+
     return res.status(201).json(data);
   }),
 );
@@ -118,7 +146,7 @@ router.patch(
   catchAsync(async (req, res) => {
     const { data: existing } = await supabaseAdmin
       .from('employees')
-      .select('department_id')
+      .select('department_id, name')
       .eq('id', req.params.id)
       .eq('organization_id', req.user.organization_id)
       .maybeSingle();
@@ -149,6 +177,21 @@ router.patch(
       .select()
       .single();
     if (error) return fail(res, 500, error.message);
+
+    const dName = await deptName(existing.department_id);
+    const actorIsAdmin = req.user.role === 'admin';
+    const actor = actorIsAdmin ? 'An admin' : `${dName}`;
+    notify({
+      organization_id: req.user.organization_id,
+      actor: req.user,
+      type: actorIsAdmin ? 'employee.updated.admin' : 'employee.updated',
+      title: 'Employee updated',
+      message: `${actor} updated "${data.name || existing.name}".`,
+      entity_type: 'employee',
+      entity_id: data.id,
+      link: '/employees',
+    });
+
     return res.json(data);
   }),
 );
@@ -161,7 +204,7 @@ router.delete(
   catchAsync(async (req, res) => {
     const { data: existing } = await supabaseAdmin
       .from('employees')
-      .select('department_id')
+      .select('department_id, name')
       .eq('id', req.params.id)
       .eq('organization_id', req.user.organization_id)
       .maybeSingle();
@@ -169,6 +212,20 @@ router.delete(
     if (req.user.role !== 'admin' && existing.department_id !== req.user.department_id) {
       return fail(res, 403, 'You can only delete from your own department');
     }
+
+    const dName = await deptName(existing.department_id);
+    const actorIsAdmin = req.user.role === 'admin';
+    const actor = actorIsAdmin ? 'An admin' : `${dName}`;
+    notify({
+      organization_id: req.user.organization_id,
+      actor: req.user,
+      type: actorIsAdmin ? 'employee.deleted.admin' : 'employee.deleted',
+      title: 'Employee removed',
+      message: `${actor} removed employee "${existing.name}".`,
+      entity_type: 'employee',
+      entity_id: req.params.id,
+      link: '/employees',
+    });
 
     const { data, error } = await supabaseAdmin
       .from('employees')

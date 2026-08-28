@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { SkeletonText } from '../components/Skeletons';
 import './SettingsPage.css';
 
 const PARTNER_BLANK = { name: '', email: '', role: '', ownership_share: 50 };
@@ -27,6 +29,7 @@ export default function SettingsPage() {
 
   const [showDangerModal, setShowDangerModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   useEffect(() => {
     api('/organizations')
@@ -86,7 +89,12 @@ export default function SettingsPage() {
   }
 
   function handleLogout() {
-    logout();
+    setConfirmLogout(true);
+  }
+
+  async function doLogout() {
+    setConfirmLogout(false);
+    await logout();
     navigate('/');
   }
 
@@ -108,7 +116,9 @@ export default function SettingsPage() {
         <div className="settings-section-header">
           <div>
             <h2 className="settings-section-title">Profile</h2>
-            <p className="settings-section-desc">{organization?.name || ''} — {user?.full_name} · {user?.role}</p>
+            <p className="settings-section-desc">
+              {loading ? <SkeletonText lines={1} width={220} height={14} /> : `${organization?.name || ''} — ${user?.full_name} · ${user?.role}`}
+            </p>
           </div>
           <button
             className="settings-edit-btn press-effect"
@@ -285,6 +295,16 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmLogout}
+        title="Sign out?"
+        message="Are you sure you want to leave? You'll need to log in again."
+        confirmLabel="Sign out"
+        danger
+        onConfirm={doLogout}
+        onCancel={() => setConfirmLogout(false)}
+      />
     </div>
     </div>
   );

@@ -5,10 +5,12 @@ import { organizationsRouter } from './routes/organizations.js';
 import { departmentsRouter } from './routes/departments.js';
 import { employeesRouter } from './routes/employees.js';
 import { machineryRouter } from './routes/machinery.js';
+import { maintenanceRouter } from './routes/maintenance.js';
 import { resourcesRouter } from './routes/resources.js';
 import { transfersRouter } from './routes/transfers.js';
 import { eventsRouter } from './routes/events.js';
 import { documentsRouter } from './routes/documents.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { requireAuth } from './middleware/auth.js';
 
 function corsOrigin(origin, callback) {
@@ -56,10 +58,12 @@ export function createApp() {
   api.use(departmentsRouter);
   api.use(employeesRouter);
   api.use(machineryRouter);
+  api.use(maintenanceRouter);
   api.use(resourcesRouter);
   api.use(transfersRouter);
   api.use(eventsRouter);
   api.use(documentsRouter);
+  api.use(notificationsRouter);
 
   app.use(api);
 

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { api, getToken, setToken, clearToken } from '../lib/api';
+import { api, getToken, setToken, clearToken, clearCache } from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -79,6 +79,7 @@ export function AuthProvider({ children }) {
       /* ignore network errors on logout */
     } finally {
       clearToken();
+      clearCache();
       setUser(null);
       setOrganization(null);
     }

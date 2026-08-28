@@ -2,8 +2,29 @@ import { Router } from 'express';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { catchAsync, fail } from '../middleware/catchAsync.js';
+import { notify } from '../lib/notifications.js';
 
 const router = Router();
+
+/** Find an auth user by email (server-side Auth Admin lookup). Returns the user or null. */
+async function getUserByEmail(email) {
+  const target = (email || '').trim().toLowerCase();
+  if (!target) return null;
+  let page = 1;
+  const perPage = 1000;
+  while (page <= 5) {
+    // eslint-disable-next-line no-await-in-loop
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    if (error) throw new Error(error.message);
+    const users = data?.users || [];
+    // eslint-disable-next-line no-await-in-loop
+    const hit = users.find((u) => (u.email || '').toLowerCase() === target);
+    if (hit) return hit;
+    if (users.length < perPage) break;
+    page += 1;
+  }
+  return null;
+}
 
 // ---------------------------------------------------------------
 // GET /departments — list. Admins see the whole org; dept heads
@@ -12,6 +33,19 @@ const router = Router();
 router.get(
   '/departments',
   catchAsync(async (req, res) => {
+    // ?targets=1 or ?targets=true returns all org departments (id, name) for
+    // transfer targeting, even for dept heads (they need to see every
+    // department they can send to).
+    if (req.query.targets === 'true' || req.query.targets === '1') {
+      const { data, error } = await supabaseAdmin
+        .from('departments')
+        .select('id, name')
+        .eq('organization_id', req.user.organization_id)
+        .order('name', { ascending: true });
+      if (error) return fail(res, 500, error.message);
+      return res.json(data || []);
+    }
+
     let query = supabaseAdmin
       .from('departments')
       .select('*')
@@ -75,13 +109,25 @@ router.post(
   '/departments',
   requireAdmin,
   catchAsync(async (req, res) => {
-    const { name, description, head_name, head_email, head_password } = req.body || {};
+    const { name, description, address, head_name, head_email, head_password } = req.body || {};
     if (!name?.trim()) return fail(res, 400, 'Department name is required');
 
     let headProfileId = null;
 
     // Provision a department-head account out-of-band (server-side Auth Admin).
     if (head_email && head_password) {
+      try {
+        const existingUser = await getUserByEmail(head_email);
+        if (existingUser) {
+          return fail(
+            res,
+            409,
+            'A user with this email already exists. Use a different email to provision this department head.',
+          );
+        }
+      } catch (e) {
+        return fail(res, 500, e.message);
+      }
       const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: head_email.trim(),
         password: head_password,
@@ -99,6 +145,7 @@ router.post(
         organization_id: req.user.organization_id,
         name: name.trim(),
         description: description || null,
+        address: address || null,
         head_profile_id: headProfileId,
       })
       .select()
@@ -122,6 +169,17 @@ router.post(
       if (profError) return fail(res, 500, profError.message);
     }
 
+    notify({
+      organization_id: req.user.organization_id,
+      actor: req.user,
+      type: 'department.created',
+      title: 'Department created',
+      message: `Department "${name.trim()}" was created.`,
+      entity_type: 'department',
+      entity_id: dept.id,
+      link: '/departments',
+    });
+
     return res.status(201).json(dept);
   }),
 );
@@ -134,7 +192,7 @@ router.patch(
   '/departments/:id',
   requireAdmin,
   catchAsync(async (req, res) => {
-    const { name, description, head_name, head_email, head_password, head_profile_id } = req.body || {};
+    const { name, description, address, head_name, head_email, head_password, head_profile_id } = req.body || {};
     const orgId = req.user.organization_id;
 
     const { data: existing, error: existError } = await supabaseAdmin
@@ -151,9 +209,22 @@ router.patch(
     const updates = {};
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
+    if (address !== undefined) updates.address = address;
 
     // Provision a new head if the caller supplied an email+password.
     if (head_email && head_password) {
+      try {
+        const existingUser = await getUserByEmail(head_email);
+        if (existingUser) {
+          return fail(
+            res,
+            409,
+            'A user with this email already exists. Use a different email to provision this department head.',
+          );
+        }
+      } catch (e) {
+        return fail(res, 500, e.message);
+      }
       const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: head_email.trim(),
         password: head_password,
@@ -191,6 +262,18 @@ router.patch(
       .select()
       .single();
     if (error) return fail(res, 500, error.message);
+
+    notify({
+      organization_id: orgId,
+      actor: req.user,
+      type: 'department.updated',
+      title: 'Department updated',
+      message: `Department "${data?.name || existing.name}" was updated.`,
+      entity_type: 'department',
+      entity_id: req.params.id,
+      link: '/departments',
+    });
+
     return res.json(data);
   }),
 );
@@ -202,6 +285,14 @@ router.delete(
   '/departments/:id',
   requireAdmin,
   catchAsync(async (req, res) => {
+    const { data: existing } = await supabaseAdmin
+      .from('departments')
+      .select('name')
+      .eq('id', req.params.id)
+      .eq('organization_id', req.user.organization_id)
+      .maybeSingle();
+    if (!existing) return fail(res, 404, 'Department not found');
+
     const { data, error } = await supabaseAdmin
       .from('departments')
       .delete()
@@ -210,6 +301,18 @@ router.delete(
       .select()
       .single();
     if (error) return fail(res, 500, error.message);
+
+    notify({
+      organization_id: req.user.organization_id,
+      actor: req.user,
+      type: 'department.deleted',
+      title: 'Department deleted',
+      message: `Department "${existing.name}" was deleted.`,
+      entity_type: 'department',
+      entity_id: req.params.id,
+      link: '/departments',
+    });
+
     return res.json(data);
   }),
 );

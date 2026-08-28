@@ -128,7 +128,7 @@ export default function SignupPage() {
             <div className="auth-card">
               <div className="auth-card-header">
                 <div className="auth-card-logo-sm">
-                  <Brand size={44} round={10} textSize={1.3} />
+                  <Brand size={44} round={10} showText={false} />
                 </div>
                 <div>
                   <h2 className="auth-card-title">Create your organization</h2>

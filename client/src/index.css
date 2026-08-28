@@ -96,6 +96,11 @@ input, textarea, select {
   font-size: inherit;
 }
 
+/* Disable the draggable resize handle on all textareas */
+textarea {
+  resize: none;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -374,7 +379,7 @@ input, textarea, select {
   color: var(--text);
   background: var(--bg);
   outline: none;
-  resize: vertical;
+  resize: none;
 }
 
 .modal-field input:focus,
@@ -489,5 +494,25 @@ input, textarea, select {
   padding: 48px 16px;
   text-align: center;
   color: var(--text-secondary);
+}
+
+/* --- Popups: keep scroll inside the card borders and hide ugly scrollbars --- */
+/* Apply to every popup card so tall content scrolls internally (contained) and
+   the native scrollbar is removed visually. Scrolling still works via wheel/touch. */
+.modal-card,
+.settings-modal,
+.confirm-card {
+  max-height: 90vh;
+  overflow-y: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.modal-card::-webkit-scrollbar,
+.settings-modal::-webkit-scrollbar,
+.confirm-card::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 

@@ -54,7 +54,21 @@
 
 .topbar-search-icon {
   color: var(--text-muted);
-  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.topbar-search-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.topbar-search-clear:hover {
+  color: var(--text);
 }
 
 .topbar-search-input {

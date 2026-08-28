@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import lottie from 'lottie-web';
-import { PreviewFrame, DashboardPreview, DepartmentsPreview, SettingsPreview } from './LandingPreviews';
+import { PreviewFrame, DashboardPreview, DepartmentsPreview, SettingsPreview, NotificationsPreview } from './LandingPreviews';
 import Brand from '../components/Brand';
 import './LandingPage.css';
 
@@ -175,7 +175,7 @@ export default function LandingPage() {
             <h2 className="landing-section-title">A closer look at how it works</h2>
           </RevealDiv>
           <RevealDiv delay={2}>
-            <p className="landing-section-desc">Three core screens. One focused experience.</p>
+            <p className="landing-section-desc">Four core screens. One focused experience.</p>
           </RevealDiv>
 
           {/* — Dashboard — */}
@@ -186,6 +186,8 @@ export default function LandingPage() {
               <p>Your command center. See department counts, employee totals, machinery status, and resource levels at a glance. Chart shows asset trends. Recent transfers and department rankings keep you informed.</p>
             </div>
             <div className="landing-preview-visual">
+              <span className="lp-float lp-float-tl lp-float-dark">◈ 6 Departments</span>
+              <span className="lp-float lp-float-br lp-float-green">▲ +12% resources</span>
               <PreviewFrame>
                 <DashboardPreview />
               </PreviewFrame>
@@ -200,6 +202,8 @@ export default function LandingPage() {
               <p>Every department as a card. See head count, machinery, and resources at a glance. Click into any department to manage its employees, machines, events, and documents — all in tabbed views.</p>
             </div>
             <div className="landing-preview-visual">
+              <span className="lp-float lp-float-tr">⬡ Weaving</span>
+              <span className="lp-float lp-float-bl lp-float-green">✓ 3 heads assigned</span>
               <PreviewFrame>
                 <DepartmentsPreview />
               </PreviewFrame>
@@ -214,8 +218,26 @@ export default function LandingPage() {
               <p>Manage your organization profile, edit your personal info, and control ownership structure. Add partners, set share percentages, and see a visual ownership breakdown — all in one place.</p>
             </div>
             <div className="landing-preview-visual">
+              <span className="lp-float lp-float-tr lp-float-dark">Ownership 55 / 45</span>
+              <span className="lp-float lp-float-bl lp-float-green">✓ Saved</span>
               <PreviewFrame>
                 <SettingsPreview />
+              </PreviewFrame>
+            </div>
+          </RevealDiv>
+
+          {/* — Notifications — */}
+          <RevealDiv delay={1} className="landing-preview-row reverse">
+            <div className="landing-preview-text">
+              <span className="landing-preview-num">04</span>
+              <h3>Notifications &amp; Alerts</h3>
+              <p>Stay in the loop on every admin and department action. A live bell badge, a quick dropdown popup, and a full notifications page keep you updated on transfers, new hires, and approvals in real time.</p>
+            </div>
+            <div className="landing-preview-visual">
+              <span className="lp-float lp-float-tr lp-float-red">3 unread</span>
+              <span className="lp-float lp-float-br">New alert</span>
+              <PreviewFrame>
+                <NotificationsPreview />
               </PreviewFrame>
             </div>
           </RevealDiv>
@@ -334,9 +356,9 @@ export default function LandingPage() {
                   <div className="landing-project-item-icon">🚀</div>
                   <span className="landing-project-label">Deployment</span>
                   <div className="landing-deploy">
-                    <span className="landing-deploy-row"><span className="landing-deploy-tag tag-vercel">Vercel</span>Frontend</span>
-                    <span className="landing-deploy-row"><span className="landing-deploy-tag tag-render">Render</span>Backend</span>
+                    <span className="landing-deploy-row"><span className="landing-deploy-tag tag-vercel-alt">Vercel</span>Frontend</span>
                     <span className="landing-deploy-row"><span className="landing-deploy-tag tag-supabase">Supabase</span>Database</span>
+                    <span className="landing-deploy-row"><span className="landing-deploy-tag tag-vercel-alt">Vercel</span>Backend</span>
                   </div>
                 </div>
               </div>

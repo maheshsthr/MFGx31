@@ -2,6 +2,8 @@ node_modules/
 dist/
 .DS_Store
 *.log
+*.log.err
+*.out.log
 .env
 .env.local
 .env.*
@@ -12,5 +14,15 @@ backend/reqs.txt
 backend/.env
 backend/.env.local
 backend/req*.txt
+backend/login.json
+backend/signup.json
 *.pem
 !*.pem.example
+
+# Local debug / reproduction artifacts — NEVER commit
+client/repro*.cjs
+client/repro*.js
+client/repro_*.txt
+client/make-account.ps1
+client/dashboard-shot.png
+client/pw-install.*

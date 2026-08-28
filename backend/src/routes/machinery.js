@@ -1,8 +1,19 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { catchAsync, fail } from '../middleware/catchAsync.js';
+import { notify } from '../lib/notifications.js';
 
 const router = Router();
+
+async function deptName(deptId) {
+  if (!deptId) return 'Department';
+  const { data } = await supabaseAdmin
+    .from('departments')
+    .select('name')
+    .eq('id', deptId)
+    .maybeSingle();
+  return data?.name || 'Department';
+}
 
 async function departmentInOrg(deptId, orgId) {
   const { data } = await supabaseAdmin
@@ -103,6 +114,22 @@ router.post(
       .select()
       .single();
     if (error) return fail(res, 500, error.message);
+
+    const dName = await deptName(dept.id);
+    const actorIsAdmin = req.user.role === 'admin';
+    notify({
+      organization_id: req.user.organization_id,
+      actor: req.user,
+      type: actorIsAdmin ? 'machinery.created.admin' : 'machinery.created',
+      title: 'Machinery added',
+      message: actorIsAdmin
+        ? `Machinery "${data.name}" added to ${dName}.`
+        : `${dName} added machinery "${data.name}".`,
+      entity_type: 'machinery',
+      entity_id: data.id,
+      link: '/machinery',
+    });
+
     return res.status(201).json(data);
   }),
 );
@@ -115,7 +142,7 @@ router.patch(
   catchAsync(async (req, res) => {
     const { data: existing } = await supabaseAdmin
       .from('machinery')
-      .select('department_id')
+      .select('department_id, name')
       .eq('id', req.params.id)
       .eq('organization_id', req.user.organization_id)
       .maybeSingle();
@@ -146,6 +173,21 @@ router.patch(
       .select()
       .single();
     if (error) return fail(res, 500, error.message);
+
+    const dName = await deptName(existing.department_id);
+    const actorIsAdmin = req.user.role === 'admin';
+    const actor = actorIsAdmin ? 'An admin' : `${dName}`;
+    notify({
+      organization_id: req.user.organization_id,
+      actor: req.user,
+      type: actorIsAdmin ? 'machinery.updated.admin' : 'machinery.updated',
+      title: 'Machinery updated',
+      message: `${actor} updated machinery "${data.name || existing.name}".`,
+      entity_type: 'machinery',
+      entity_id: data.id,
+      link: '/machinery',
+    });
+
     return res.json(data);
   }),
 );
@@ -158,7 +200,7 @@ router.delete(
   catchAsync(async (req, res) => {
     const { data: existing } = await supabaseAdmin
       .from('machinery')
-      .select('department_id')
+      .select('department_id, name')
       .eq('id', req.params.id)
       .eq('organization_id', req.user.organization_id)
       .maybeSingle();
@@ -166,6 +208,20 @@ router.delete(
     if (req.user.role !== 'admin' && existing.department_id !== req.user.department_id) {
       return fail(res, 403, 'You can only delete from your own department');
     }
+
+    const dName = await deptName(existing.department_id);
+    const actorIsAdmin = req.user.role === 'admin';
+    const actor = actorIsAdmin ? 'An admin' : `${dName}`;
+    notify({
+      organization_id: req.user.organization_id,
+      actor: req.user,
+      type: actorIsAdmin ? 'machinery.deleted.admin' : 'machinery.deleted',
+      title: 'Machinery removed',
+      message: `${actor} removed machinery "${existing.name}".`,
+      entity_type: 'machinery',
+      entity_id: req.params.id,
+      link: '/machinery',
+    });
 
     const { data, error } = await supabaseAdmin
       .from('machinery')

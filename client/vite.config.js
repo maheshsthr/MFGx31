@@ -20,6 +20,7 @@ export default defineConfig({
       '/transfers': 'http://localhost:3000',
       '/events': 'http://localhost:3000',
       '/documents': 'http://localhost:3000',
+      '/notifications': 'http://localhost:3000',
     },
   },
 })

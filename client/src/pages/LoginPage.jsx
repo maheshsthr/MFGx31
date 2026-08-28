@@ -18,8 +18,8 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const user = await login(email, password);
-      if (user.role === 'department_head' && user.department_id) {
-        navigate(`/departments/${user.department_id}`);
+      if (user.role === 'department_head') {
+        navigate('/app/dashboard');
       } else {
         navigate('/dashboard');
       }

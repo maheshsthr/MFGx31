@@ -2,7 +2,9 @@ import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Topbar from '../layouts/Topbar';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../lib/api';
+import { useSearch } from '../context/SearchContext';
+import { api, getCached, setCached } from '../lib/api';
+import { Skeleton, SkeletonTable, SkeletonText } from '../components/Skeletons';
 import './DepartmentDetailPage.css';
 
 const TABS = ['Employees', 'Machinery', 'Resources', 'Events', 'Documents', 'Transfer History'];
@@ -30,23 +32,31 @@ const BLANK_FORMS = {
 export default function DepartmentDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { query } = useSearch();
   const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState('Employees');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !getCached(`/departments/${id}`));
   const [error, setError] = useState('');
-  const [dept, setDept] = useState(null);
-  const [employees, setEmployees] = useState([]);
-  const [machinery, setMachinery] = useState([]);
-  const [resources, setResources] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [documents, setDocuments] = useState([]);
-  const [transfers, setTransfers] = useState([]);
+  const [dept, setDept] = useState(() => getCached(`/departments/${id}`) || null);
+  const [employees, setEmployees] = useState(() => (getCached('/employees') || []).filter((e) => e.department_id === id));
+  const [machinery, setMachinery] = useState(() => (getCached('/machinery') || []).filter((x) => x.department_id === id));
+  const [resources, setResources] = useState(() => (getCached('/resources') || []).filter((r) => r.department_id === id));
+  const [events, setEvents] = useState(() => getCached(`/events?department_id=${id}&include_orgwide=true`) || []);
+  const [documents, setDocuments] = useState(() => getCached(`/documents?department_id=${id}&include_orgwide=true`) || []);
+  const [transfers, setTransfers] = useState(() => getCached(`/transfers?department_id=${id}`) || []);
   const [form, setForm] = useState(BLANK_FORMS.Employees);
   const [saving, setSaving] = useState(false);
 
+  const [maintMachine, setMaintMachine] = useState(null);
+  const [maintRecords, setMaintRecords] = useState([]);
+  const [maintLoading, setMaintLoading] = useState(false);
+  const [showMaintModal, setShowMaintModal] = useState(false);
+  const [maintForm, setMaintForm] = useState({ work_type: 'maintenance', title: '', description: '', cost: '', scheduled_date: '', completed_date: '', status: 'scheduled' });
+  const [maintError, setMaintError] = useState('');
+  const [maintSaving, setMaintSaving] = useState(false);
+
   async function loadCore() {
-    setLoading(true);
     setError('');
     try {
       const [d, em, m, re] = await Promise.all([
@@ -55,6 +65,10 @@ export default function DepartmentDetailPage() {
         api('/machinery'),
         api('/resources'),
       ]);
+      setCached(`/departments/${id}`, d);
+      setCached('/employees', em || []);
+      setCached('/machinery', m || []);
+      setCached('/resources', re || []);
       setDept(d);
       setEmployees((em || []).filter((e) => e.department_id === id));
       setMachinery((m || []).filter((x) => x.department_id === id));
@@ -74,6 +88,9 @@ export default function DepartmentDetailPage() {
         api(`/documents?department_id=${id}&include_orgwide=true`),
         api(`/transfers?department_id=${id}`),
       ]);
+      setCached(`/events?department_id=${id}&include_orgwide=true`, ev || []);
+      setCached(`/documents?department_id=${id}&include_orgwide=true`, docs || []);
+      setCached(`/transfers?department_id=${id}`, tr || []);
       setEvents(ev || []);
       setDocuments(docs || []);
       setTransfers(tr || []);
@@ -121,7 +138,70 @@ export default function DepartmentDetailPage() {
 
   const canAdd = isAdmin || activeTab === 'Employees' || activeTab === 'Machinery' || activeTab === 'Resources';
 
-  if (loading) return <div className="admin-content"><div className="data-state">Loading…</div></div>;
+  async function openMaint(m) {
+    setMaintMachine({ id: m.id, name: m.name });
+    setMaintLoading(true);
+    setMaintError('');
+    try {
+      const data = await api(`/machinery/${m.id}/maintenance`);
+      setMaintRecords(data || []);
+    } catch (err) {
+      setMaintRecords([]);
+      setMaintError(err.message);
+    } finally {
+      setMaintLoading(false);
+    }
+  }
+
+  function openMaintAdd() {
+    setMaintForm({ work_type: 'maintenance', title: '', description: '', cost: '', scheduled_date: '', completed_date: '', status: 'scheduled' });
+    setMaintError('');
+    setShowMaintModal(true);
+  }
+
+  async function submitMaint(e) {
+    e.preventDefault();
+    if (!maintMachine) return;
+    setMaintSaving(true);
+    setMaintError('');
+    try {
+      await api(`/machinery/${maintMachine.id}/maintenance`, { method: 'POST', body: JSON.stringify(maintForm) });
+      setShowMaintModal(false);
+      await openMaint(maintMachine);
+    } catch (err) {
+      setMaintError(err.message);
+    } finally {
+      setMaintSaving(false);
+    }
+  }
+
+  const q = query.trim().toLowerCase();
+  const flt = (arr, fields) =>
+    !q ? arr : (arr || []).filter((x) => fields.some((f) => x[f] && String(x[f]).toLowerCase().includes(q)));
+  const fEmployees = flt(employees, ['name', 'designation', 'contact_number', 'status']);
+  const fMachinery = flt(machinery, ['name', 'type', 'status', 'notes']);
+  const fResources = flt(resources, ['name', 'category', 'unit']);
+  const fEvents = flt(events, ['title', 'description']);
+  const fDocuments = flt(documents, ['title']);
+  const fTransfers = flt(transfers, ['item_name', 'from_name', 'to_name', 'reason']);
+
+  if (loading) {
+    return (
+      <>
+        <Topbar title />
+        <div className="admin-content">
+          <div className="dept-detail-header" style={{ alignItems: 'flex-start', flexDirection: 'column', gap: 12 }}>
+            <Skeleton width={120} height={16} round={6} />
+            <Skeleton width={220} height={32} round={8} />
+          </div>
+          <div className="dept-tabs">
+            {TABS.map((t) => <SkeletonText key={t} width={120} height={36} lines={1} />)}
+          </div>
+          <SkeletonTable rows={5} cols={6} />
+        </div>
+      </>
+    );
+  }
   if (!dept || error) return <div className="admin-content"><div className="data-state">Department not found or unavailable. {error}</div></div>;
 
   return (
@@ -132,6 +212,7 @@ export default function DepartmentDetailPage() {
           <div>
             <Link to="/departments" className="dept-detail-back">← All Departments</Link>
             <h1 className="dept-detail-name">{dept.name}</h1>
+            {dept.address && <div className="dept-detail-address">📍 {dept.address}</div>}
           </div>
           {canAdd && (
             <button className="dept-detail-add" onClick={() => setShowAddModal(true)}>
@@ -167,7 +248,10 @@ export default function DepartmentDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {employees.map((e) => (
+                  {fEmployees.length === 0 && (
+                    <tr><td colSpan={6} className="td-empty">No employees{query ? ` match "${query}"` : ''}.</td></tr>
+                  )}
+                  {fEmployees.map((e) => (
                     <tr key={e.id}>
                       <td className="td-name">{e.name}</td>
                       <td>{e.designation}</td>
@@ -192,22 +276,67 @@ export default function DepartmentDetailPage() {
                     <th>Status</th>
                     <th>Purchased</th>
                     <th>Notes</th>
-                    <th></th>
+                    <th>History</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {machinery.map((m) => (
+                  {fMachinery.length === 0 && (
+                    <tr><td colSpan={6} className="td-empty">No machinery{query ? ` match "${query}"` : ''}.</td></tr>
+                  )}
+                  {fMachinery.map((m) => (
                     <tr key={m.id}>
                       <td className="td-name">{m.name}</td>
                       <td>{m.type}</td>
                       <td><StatusBadge status={m.status} /></td>
                       <td className="td-muted">{new Date(m.purchase_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                       <td className="td-muted">{m.notes || '—'}</td>
-                      <td><button className="td-menu">•••</button></td>
+                      <td>
+                        <button className="td-mach-history" onClick={() => openMaint(m)}>
+                          {maintLoading && maintMachine?.id === m.id ? '…' : 'History'}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+
+              {maintMachine && (
+                <div className="mach-history anim-slide-up">
+                  <div className="mach-history-head">
+                    <div>
+                      <h4 className="mach-history-title">Maintenance &amp; Repairs</h4>
+                      <span className="mach-history-sub">{maintMachine.name}</span>
+                    </div>
+                    <button className="mach-history-add" onClick={openMaintAdd}>+ Add record</button>
+                  </div>
+
+                  {maintError && <div className="data-state">⚠ {maintError}</div>}
+
+                  {maintLoading ? (
+                    <div className="data-state" style={{ padding: '20px 0' }}>Loading history…</div>
+                  ) : maintRecords.length === 0 ? (
+                    <div className="data-state" style={{ padding: '20px 0' }}>No maintenance records yet.</div>
+                  ) : (
+                    <div className="mach-history-list">
+                      {maintRecords.map((r) => (
+                        <div key={r.id} className={`mach-record ${r.status === 'completed' ? 'done' : ''}`}>
+                          <div className="mach-record-top">
+                            <span className={`mach-record-type ${r.work_type}`}>{r.work_type}</span>
+                            <span className={`mach-record-status ${r.status}`}>{r.status}</span>
+                          </div>
+                          <strong className="mach-record-title">{r.title}</strong>
+                          {r.description && <p className="mach-record-desc">{r.description}</p>}
+                          <div className="mach-record-meta">
+                            {r.cost != null && <span className="mach-record-cost">₹ {Number(r.cost).toLocaleString('en-IN')}</span>}
+                            {r.scheduled_date && <span>Scheduled: {new Date(r.scheduled_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
+                            {r.completed_date && <span>Completed: {new Date(r.completed_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -225,7 +354,10 @@ export default function DepartmentDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {resources.map((r) => (
+                  {fResources.length === 0 && (
+                    <tr><td colSpan={6} className="td-empty">No resources{query ? ` match "${query}"` : ''}.</td></tr>
+                  )}
+                  {fResources.map((r) => (
                     <tr key={r.id}>
                       <td className="td-name">{r.name}</td>
                       <td>{r.category}</td>
@@ -242,7 +374,10 @@ export default function DepartmentDetailPage() {
 
           {activeTab === 'Events' && (
             <div className="dept-events-grid">
-              {events.map((ev) => (
+              {fEvents.length === 0 && (
+                <div className="data-state" style={{ gridColumn: '1 / -1' }}>No events{query ? ` match "${query}"` : ''}.</div>
+              )}
+              {fEvents.map((ev) => (
                 <div key={ev.id} className="dept-event-card">
                   <div className="dept-event-date-badge">
                     <span className="dept-event-day">{new Date(ev.event_date).getDate()}</span>
@@ -262,7 +397,10 @@ export default function DepartmentDetailPage() {
 
           {activeTab === 'Documents' && (
             <div className="dept-docs-grid">
-              {documents.map((doc) => (
+              {fDocuments.length === 0 && (
+                <div className="data-state" style={{ gridColumn: '1 / -1' }}>No documents{query ? ` match "${query}"` : ''}.</div>
+              )}
+              {fDocuments.map((doc) => (
                 <div key={doc.id} className="dept-doc-card">
                   <div className="dept-doc-icon">📄</div>
                   <div className="dept-doc-info">
@@ -294,9 +432,9 @@ export default function DepartmentDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {transfers.length === 0 ? (
-                    <tr><td colSpan={6} className="td-empty">No transfer history for this department</td></tr>
-                  ) : transfers.map((t) => (
+                  {fTransfers.length === 0 ? (
+                    <tr><td colSpan={6} className="td-empty">{query ? `No transfers match "${query}".` : 'No transfer history for this department'}</td></tr>
+                  ) : fTransfers.map((t) => (
                     <tr key={t.id}>
                       <td className="td-name">{t.item_name}</td>
                       <td><span className="td-type">{t.item_type}</span></td>
@@ -365,6 +503,41 @@ export default function DepartmentDetailPage() {
                 <div className="modal-actions">
                   <button type="button" className="modal-btn secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
                   <button type="submit" className="modal-btn primary" disabled={saving}>{saving ? 'Saving…' : 'Add'}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {showMaintModal && (
+          <div className="modal-overlay" onClick={() => setShowMaintModal(false)}>
+            <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+              <h2 className="modal-title">Add Maintenance / Repair</h2>
+              <p className="modal-hint">{maintMachine ? `For: ${maintMachine.name}` : ''}</p>
+              <form onSubmit={submitMaint} className="modal-form">
+                <div className="modal-field"><label>Work Type</label>
+                  <select value={maintForm.work_type} onChange={(e) => setMaintForm({ ...maintForm, work_type: e.target.value })}>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="repair">Repair</option>
+                    <option value="inspection">Inspection</option>
+                  </select>
+                </div>
+                <div className="modal-field"><label>Title</label><input type="text" value={maintForm.title} onChange={(e) => setMaintForm({ ...maintForm, title: e.target.value })} required placeholder="e.g. Bearing replacement" /></div>
+                <div className="modal-field"><label>Description</label><textarea rows={3} value={maintForm.description} onChange={(e) => setMaintForm({ ...maintForm, description: e.target.value })} /></div>
+                <div className="modal-field"><label>Cost</label><input type="number" min="0" step="0.01" value={maintForm.cost} onChange={(e) => setMaintForm({ ...maintForm, cost: e.target.value })} placeholder="0" /></div>
+                <div className="modal-field"><label>Scheduled Date</label><input type="date" value={maintForm.scheduled_date} onChange={(e) => setMaintForm({ ...maintForm, scheduled_date: e.target.value })} /></div>
+                <div className="modal-field"><label>Completed Date</label><input type="date" value={maintForm.completed_date} onChange={(e) => setMaintForm({ ...maintForm, completed_date: e.target.value })} /></div>
+                <div className="modal-field"><label>Status</label>
+                  <select value={maintForm.status} onChange={(e) => setMaintForm({ ...maintForm, status: e.target.value })}>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+                {maintError && <p className="modal-hint" style={{ color: 'var(--red)' }}>⚠ {maintError}</p>}
+                <div className="modal-actions">
+                  <button type="button" className="modal-btn secondary" onClick={() => setShowMaintModal(false)}>Cancel</button>
+                  <button type="submit" className="modal-btn primary" disabled={maintSaving}>{maintSaving ? 'Saving…' : 'Add Record'}</button>
                 </div>
               </form>
             </div>

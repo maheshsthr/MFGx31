@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSearch } from '../context/SearchContext';
 import { api } from '../lib/api';
+import NotificationBell from '../components/NotificationBell';
 import './Topbar.css';
 
 export default function Topbar({ title, subtitle }) {
   const { user, organization } = useAuth();
+  const { query, setQuery } = useSearch();
   const [departmentName, setDepartmentName] = useState(null);
 
   useEffect(() => {
@@ -33,13 +36,22 @@ export default function Topbar({ title, subtitle }) {
       </div>
       <div className="topbar-right">
         <div className="topbar-search">
-          <span className="topbar-search-icon">⌕</span>
-          <input type="text" placeholder="Search..." className="topbar-search-input" />
+          <svg className="topbar-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search this page..."
+            className="topbar-search-input"
+          />
+          {query && (
+            <button className="topbar-search-clear" onClick={() => setQuery('')} aria-label="Clear search">✕</button>
+          )}
         </div>
-        <button className="topbar-bell" title="Notifications">
-          <span>🔔</span>
-          <span className="topbar-bell-dot"></span>
-        </button>
+        <NotificationBell />
       </div>
     </header>
   );
