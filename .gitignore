@@ -27,3 +27,5 @@ client/repro_*.txt
 client/make-account.ps1
 client/dashboard-shot.png
 client/pw-install.*
+
+# deploy-test-marker
