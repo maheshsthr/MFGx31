@@ -1,4 +1,4 @@
-node_modules/
+﻿node_modules/
 dist/
 .DS_Store
 *.log
@@ -10,7 +10,7 @@ dist/
 .env.*
 !.env.example
 
-# Secrets / credentials — NEVER commit
+# Secrets / credentials â€” NEVER commit
 backend/reqs.txt
 backend/.env
 backend/.env.local
@@ -20,7 +20,7 @@ backend/signup.json
 *.pem
 !*.pem.example
 
-# Local debug / reproduction artifacts — NEVER commit
+# Local debug / reproduction artifacts â€” NEVER commit
 client/repro*.cjs
 client/repro*.js
 client/repro_*.txt
@@ -28,4 +28,3 @@ client/make-account.ps1
 client/dashboard-shot.png
 client/pw-install.*
 
-# deploy-test-marker
