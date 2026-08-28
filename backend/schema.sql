@@ -167,10 +167,21 @@ alter table public.documents enable row level security;
 -- ============================================================
 -- 10. Foreign key: profiles.department_id -> departments.id
 --     (defined after departments exists)
+--     Idempotent: Postgres has no ADD CONSTRAINT IF NOT EXISTS for
+--     foreign keys, so check pg_constraint inside a DO block.
 -- ============================================================
-alter table public.profiles
-  add constraint profiles_department_fk foreign key (department_id)
-  references public.departments (id) on delete set null;
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'profiles_department_fk'
+      and conrelid = 'public.profiles'::regclass
+  ) then
+    alter table public.profiles
+      add constraint profiles_department_fk foreign key (department_id)
+      references public.departments (id) on delete set null;
+  end if;
+end $$;
 
 -- ============================================================
 -- 11. RLS policies + helper functions (after all tables exist)
@@ -200,54 +211,63 @@ as $$
 $$;
 
 -- Organizations: admins can manage their own org
+drop policy if exists "org admin access" on public.organizations;
 create policy "org admin access" on public.organizations
   for all to authenticated
   using (public.current_organization_id() = id and public.has_admin_role())
   with check (public.current_organization_id() = id and public.has_admin_role());
 
 -- Profiles: users can read their own
+drop policy if exists "profile own access" on public.profiles;
 create policy "profile own access" on public.profiles
   for all to authenticated
   using (id = auth.uid())
   with check (id = auth.uid());
 
 -- Departments: members of the org (admins full, dept heads read their own)
+drop policy if exists "dept org access" on public.departments;
 create policy "dept org access" on public.departments
   for all to authenticated
   using (public.current_organization_id() = organization_id)
   with check (public.current_organization_id() = organization_id and public.has_admin_role());
 
 -- Employees: admins full access; dept heads only their own department
+drop policy if exists "employees org access" on public.employees;
 create policy "employees org access" on public.employees
   for all to authenticated
   using (public.current_organization_id() = organization_id and (public.has_admin_role() or department_id = (select department_id from public.profiles where id = auth.uid())))
   with check (public.current_organization_id() = organization_id and (public.has_admin_role() or department_id = (select department_id from public.profiles where id = auth.uid())));
 
 -- Machinery: admins full access; dept heads only their own department
+drop policy if exists "machinery org access" on public.machinery;
 create policy "machinery org access" on public.machinery
   for all to authenticated
   using (public.current_organization_id() = organization_id and (public.has_admin_role() or department_id = (select department_id from public.profiles where id = auth.uid())))
   with check (public.current_organization_id() = organization_id and (public.has_admin_role() or department_id = (select department_id from public.profiles where id = auth.uid())));
 
 -- Resources: admins full access; dept heads only their own department
+drop policy if exists "resources org access" on public.resources;
 create policy "resources org access" on public.resources
   for all to authenticated
   using (public.current_organization_id() = organization_id and (public.has_admin_role() or department_id = (select department_id from public.profiles where id = auth.uid())))
   with check (public.current_organization_id() = organization_id and (public.has_admin_role() or department_id = (select department_id from public.profiles where id = auth.uid())));
 
 -- Transfers: org scoped (read/insert)
+drop policy if exists "transfers org access" on public.transfers;
 create policy "transfers org access" on public.transfers
   for all to authenticated
   using (public.current_organization_id() = organization_id)
   with check (public.current_organization_id() = organization_id);
 
 -- Events: org wide; dept heads see own + org-wide (department_id null)
+drop policy if exists "events org access" on public.events;
 create policy "events org access" on public.events
   for all to authenticated
   using (public.current_organization_id() = organization_id and (public.has_admin_role() or department_id is null or department_id = (select department_id from public.profiles where id = auth.uid())))
   with check (public.current_organization_id() = organization_id and public.has_admin_role());
 
 -- Documents: org wide; dept heads read own + org-wide
+drop policy if exists "documents org access" on public.documents;
 create policy "documents org access" on public.documents
   for all to authenticated
   using (public.current_organization_id() = organization_id and (public.has_admin_role() or department_id is null or department_id = (select department_id from public.profiles where id = auth.uid())))
@@ -271,6 +291,7 @@ create table if not exists public.organization_owners (
 
 alter table public.organization_owners enable row level security;
 
+drop policy if exists "owners org access" on public.organization_owners;
 create policy "owners org access" on public.organization_owners
   for all to authenticated
   using (public.current_organization_id() = organization_id)
