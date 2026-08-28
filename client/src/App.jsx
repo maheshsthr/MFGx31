@@ -10,14 +10,32 @@ import DepartmentDetailPage from './pages/DepartmentDetailPage';
 import TransfersPage from './pages/TransfersPage';
 import SettingsPage from './pages/SettingsPage';
 
+function FullScreenLoader() {
+  return (
+    <div className="app-loader">
+      <div className="app-loader-spinner" />
+    </div>
+  );
+}
+
 function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return <FullScreenLoader />;
   return isAuthenticated ? children : <Navigate to="/login" />;
 }
 
 function PublicRoute({ children }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return <FullScreenLoader />;
   return isAuthenticated ? <Navigate to="/dashboard" /> : children;
+}
+
+// Redirect authenticated users to their role-appropriate landing page.
+function HomeRedirect() {
+  const { isAuthenticated, user } = useAuth();
+  return isAuthenticated
+    ? <Navigate to={user?.role === 'department_head' && user?.department_id ? `/departments/${user.department_id}` : '/dashboard'} />
+    : <Navigate to="/" />;
 }
 
 function AppRoutes() {
@@ -35,6 +53,7 @@ function AppRoutes() {
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
 
+      <Route path="/app" element={<HomeRedirect />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

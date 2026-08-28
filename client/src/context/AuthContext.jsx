@@ -1,58 +1,109 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-import { DUMMY_USER_ADMIN, DUMMY_USER_DEPT_HEAD, DUMMY_ORG } from '../data/dummyData';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { api, getToken, setToken, clearToken } from '../lib/api';
 
 const AuthContext = createContext(null);
-
-const DUMMY_ACCOUNTS = {
-  'rajesh@metalworks.in': { password: 'admin123', user: DUMMY_USER_ADMIN },
-  'amit@metalworks.in': { password: 'dept123', user: DUMMY_USER_DEPT_HEAD },
-};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [organization, setOrganization] = useState(null);
+  const [loading, setLoading] = useState(true); // true until initial /auth/me resolves
 
-  const login = useCallback((email, password) => {
-    const account = DUMMY_ACCOUNTS[email];
-    if (!account || account.password !== password) {
-      throw new Error('Invalid email or password');
+  // Restore session on first load if a token exists.
+  useEffect(() => {
+    let cancelled = false;
+    async function restore() {
+      if (!getToken()) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const data = await api('/auth/me');
+        if (!cancelled) {
+          setUser(data.user);
+          setOrganization(data.organization || null);
+        }
+      } catch {
+        clearToken();
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-    setUser(account.user);
-    setOrganization(DUMMY_ORG);
-    return account.user;
+    restore();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const logout = useCallback(() => {
-    setUser(null);
-    setOrganization(null);
+  const login = useCallback(async (email, password) => {
+    const data = await api('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    setToken(data.token);
+    setUser(data.user);
+    setOrganization(data.organization || null);
+    return data.user;
   }, []);
 
-  const signup = useCallback((orgName, industry, ownerName, email, password, ownershipType, owners) => {
-    const newUser = {
-      id: 'u_' + Date.now(),
-      full_name: ownerName,
-      email,
-      role: 'admin',
-      organization_id: 'org_' + Date.now(),
-      department_id: null,
-      avatar_url: null,
-    };
-    const newOrg = {
-      id: newUser.organization_id,
-      name: orgName,
-      industry_type: industry,
-      logo_url: null,
-      ownership_type: ownershipType || 'solo',
-      owners: owners || [],
-      created_at: new Date().toISOString(),
-    };
-    setUser(newUser);
-    setOrganization(newOrg);
-    return { success: true, user: newUser };
+  const signup = useCallback(async (
+    companyName,
+    industry,
+    ownerName,
+    ownerEmail,
+    password,
+    ownershipType,
+    owners,
+  ) => {
+    const data = await api('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({
+        company_name: companyName,
+        industry,
+        owner_name: ownerName,
+        owner_email: ownerEmail,
+        password,
+        ownership_type: ownershipType,
+        owners: owners || [],
+      }),
+    });
+    setToken(data.token);
+    setUser(data.user);
+    setOrganization(data.organization || null);
+    return { success: true, user: data.user };
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await api('/auth/logout', { method: 'POST' });
+    } catch {
+      /* ignore network errors on logout */
+    } finally {
+      clearToken();
+      setUser(null);
+      setOrganization(null);
+    }
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    const data = await api('/auth/me');
+    setUser(data.user);
+    setOrganization(data.organization || null);
+    return data;
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, organization, login, logout, signup, isAuthenticated: !!user }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        organization,
+        login,
+        signup,
+        logout,
+        refreshUser,
+        loading,
+        isAuthenticated: !!user,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

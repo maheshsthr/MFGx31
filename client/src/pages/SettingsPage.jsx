@@ -1,31 +1,42 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../lib/api';
 import './SettingsPage.css';
 
 const PARTNER_BLANK = { name: '', email: '', role: '', ownership_share: 50 };
-
-const OWNERS = [
-  { id: 1, name: 'Rajesh Kumar', email: 'rajesh@metalworks.in', role: 'Owner / Managing Director', ownership_share: 55 },
-  { id: 2, name: 'Priya Sharma', email: 'priya@metalworks.in', role: 'Partner / Director', ownership_share: 45 },
-];
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const [organization, setOrganization] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [settingsError, setSettingsError] = useState('');
+
   const [showProfile, setShowProfile] = useState(false);
-  const [profileName, setProfileName] = useState(user?.name || '');
+  const [profileName, setProfileName] = useState(user?.full_name || '');
   const [profileRole, setProfileRole] = useState(user?.role || '');
 
   const [showOwnership, setShowOwnership] = useState(false);
-  const [owners, setOwners] = useState(OWNERS);
+  const [owners, setOwners] = useState([]);
 
   const [showPartnerModal, setShowPartnerModal] = useState(false);
   const [editingPartner, setEditingPartner] = useState(null);
   const [partnerForm, setPartnerForm] = useState({ name: '', email: '', role: '', ownership_share: 50 });
 
   const [showDangerModal, setShowDangerModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api('/organizations')
+      .then((data) => {
+        setOrganization(data);
+        setOwners((data.owners || []).map((o) => ({ ...o, name: o.full_name || o.name })));
+      })
+      .catch((err) => setSettingsError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   function openAddPartner() {
     setEditingPartner(null);
@@ -39,18 +50,39 @@ export default function SettingsPage() {
     setShowPartnerModal(true);
   }
 
-  function savePartner(e) {
+  async function savePartner(e) {
     e.preventDefault();
-    if (editingPartner) {
-      setOwners(owners.map(o => o.id === editingPartner ? { ...o, ...partnerForm } : o));
-    } else {
-      setOwners([...owners, { ...partnerForm, id: Date.now() }]);
+    setSaving(true);
+    setSettingsError('');
+    try {
+      const body = {
+        full_name: partnerForm.name,
+        email: partnerForm.email,
+        role: partnerForm.role,
+        ownership_share: Number(partnerForm.ownership_share) || 0,
+      };
+      if (editingPartner) {
+        const updated = await api(`/organizations/owners/${editingPartner}`, { method: 'PATCH', body: JSON.stringify(body) });
+        setOwners(owners.map((o) => (o.id === editingPartner ? { ...o, ...updated, name: updated.full_name } : o)));
+      } else {
+        const created = await api('/organizations/owners', { method: 'POST', body: JSON.stringify(body) });
+        setOwners([...owners, { ...created, name: created.full_name }]);
+      }
+      setShowPartnerModal(false);
+    } catch (err) {
+      setSettingsError(err.message);
+    } finally {
+      setSaving(false);
     }
-    setShowPartnerModal(false);
   }
 
-  function removePartner(id) {
-    setOwners(owners.filter(o => o.id !== id));
+  async function removePartner(id) {
+    try {
+      await api(`/organizations/owners/${id}`, { method: 'DELETE' });
+      setOwners(owners.filter((o) => o.id !== id));
+    } catch (err) {
+      setSettingsError(err.message);
+    }
   }
 
   function handleLogout() {
@@ -58,7 +90,7 @@ export default function SettingsPage() {
     navigate('/');
   }
 
-  const totalShare = owners.reduce((s, o) => s + o.ownership_share, 0);
+  const totalShare = owners.reduce((s, o) => s + (o.ownership_share || 0), 0);
 
   return (
     <div className="admin-content">
@@ -76,11 +108,11 @@ export default function SettingsPage() {
         <div className="settings-section-header">
           <div>
             <h2 className="settings-section-title">Profile</h2>
-            <p className="settings-section-desc">{user?.name} — {user?.role}</p>
+            <p className="settings-section-desc">{organization?.name || ''} — {user?.full_name} · {user?.role}</p>
           </div>
           <button
             className="settings-edit-btn press-effect"
-            onClick={() => { setShowProfile(!showProfile); setProfileName(user?.name || ''); setProfileRole(user?.role || ''); }}
+            onClick={() => { setShowProfile(!showProfile); setProfileName(user?.full_name || ''); setProfileRole(user?.role || ''); }}
           >
             {showProfile ? 'Cancel' : 'Edit Profile'}
           </button>
@@ -209,6 +241,7 @@ export default function SettingsPage() {
         <div className="settings-modal-overlay" onClick={() => setShowPartnerModal(false)}>
           <div className="settings-modal" onClick={e => e.stopPropagation()}>
             <h3>{editingPartner ? 'Edit Partner' : 'Add Partner'}</h3>
+            {settingsError && <p style={{ color: 'var(--red)', fontSize: '0.8rem', margin: '4px 0' }}>⚠ {settingsError}</p>}
             <form onSubmit={savePartner}>
               <div className="settings-modal-row">
                 <div className="settings-field">

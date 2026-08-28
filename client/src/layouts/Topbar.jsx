@@ -1,14 +1,21 @@
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { DUMMY_DEPARTMENTS } from '../data/dummyData';
+import { api } from '../lib/api';
 import './Topbar.css';
 
 export default function Topbar({ title, subtitle }) {
   const { user, organization } = useAuth();
+  const [departmentName, setDepartmentName] = useState(null);
 
-  const isDeptHead = user?.role === 'department_head';
-  const departmentName = isDeptHead
-    ? DUMMY_DEPARTMENTS.find((d) => d.id === user.department_id)?.name
-    : null;
+  useEffect(() => {
+    let cancelled = false;
+    if (user?.role === 'department_head' && user?.department_id) {
+      api(`/departments/${user.department_id}`)
+        .then((d) => { if (!cancelled) setDepartmentName(d?.name || null); })
+        .catch(() => { if (!cancelled) setDepartmentName(null); });
+    }
+    return () => { cancelled = true; };
+  }, [user?.role, user?.department_id]);
 
   return (
     <header className="topbar">

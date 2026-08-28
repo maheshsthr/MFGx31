@@ -200,6 +200,15 @@
   color: #fff;
 }
 
+.modal-hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 600;
+}
+
 @media (max-width: 1024px) {
   .dept-grid {
     grid-template-columns: repeat(2, 1fr);

@@ -65,10 +65,14 @@ export default function SignupPage() {
     const owners = ownership_type === 'partnership'
       ? [{ name: org.owner_name, email: org.owner_email, role: 'Owner', ownership_share: 100 - partners.reduce((s, p) => s + (Number(p.ownership_share) || 0), 0) }, ...partners]
       : [];
-    const result = await signup(org.company_name, org.industry, org.owner_name, org.owner_email, org.password, ownership_type, owners);
-    setLoading(false);
-    if (result.success) navigate('/app');
-    else setError(result.error || 'Signup failed');
+    try {
+      const result = await signup(org.company_name, org.industry, org.owner_name, org.owner_email, org.password, ownership_type, owners);
+      if (result.success) navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Signup failed');
+    } finally {
+      setLoading(false);
+    }
   }
 
   function addPartner() {

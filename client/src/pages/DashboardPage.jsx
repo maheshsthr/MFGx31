@@ -1,55 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import Topbar from '../layouts/Topbar';
-import { useAuth } from '../context/AuthContext';
-import {
-  DUMMY_DEPARTMENTS,
-  DUMMY_EMPLOYEES,
-  DUMMY_MACHINERY,
-  DUMMY_RESOURCES,
-  DUMMY_TRANSFERS,
-  CHART_DATA,
-} from '../data/dummyData';
+import { api } from '../lib/api';
 import './DashboardPage.css';
-
-const stats = [
-  {
-    label: 'Total Employees',
-    value: DUMMY_EMPLOYEES.filter((e) => e.status === 'active').length,
-    trend: '+2 this month',
-    positive: true,
-    dark: true,
-  },
-  {
-    label: 'Departments',
-    value: DUMMY_DEPARTMENTS.length,
-    trend: 'All active',
-    positive: true,
-    dark: false,
-  },
-  {
-    label: 'Machinery',
-    value: DUMMY_MACHINERY.length,
-    trend: `${DUMMY_MACHINERY.filter((m) => m.status === 'maintenance').length} in maintenance`,
-    positive: false,
-    dark: false,
-  },
-  {
-    label: 'Resources',
-    value: DUMMY_RESOURCES.reduce((sum, r) => sum + r.quantity, 0).toLocaleString(),
-    trend: '+12% from last month',
-    positive: true,
-    dark: false,
-  },
-];
-
-const deptHeadcount = DUMMY_DEPARTMENTS.map((d) => ({
-  ...d,
-  headcount: DUMMY_EMPLOYEES.filter((e) => e.department_id === d.id && e.status === 'active').length,
-  machineCount: DUMMY_MACHINERY.filter((m) => m.department_id === d.id).length,
-})).sort((a, b) => b.headcount - a.headcount);
-
-const recentTransfers = DUMMY_TRANSFERS.slice(0, 4);
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -66,7 +20,68 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const [departments, setDepartments] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [machinery, setMachinery] = useState([]);
+  const [resources, setResources] = useState([]);
+  const [transfers, setTransfers] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [d, em, m, r, tr, ev] = await Promise.all([
+          api('/departments'),
+          api('/employees'),
+          api('/machinery'),
+          api('/resources'),
+          api('/transfers'),
+          api('/events'),
+        ]);
+        setDepartments(d || []);
+        setEmployees(em || []);
+        setMachinery(m || []);
+        setResources(r || []);
+        setTransfers(tr || []);
+        setEvents(ev || []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const stats = [
+    { label: 'Total Employees', value: employees.filter((e) => e.status === 'active').length, trend: 'active', positive: true, dark: true },
+    { label: 'Departments', value: departments.length, trend: 'All active', positive: true, dark: false },
+    { label: 'Machinery', value: machinery.length, trend: `${machinery.filter((m) => m.status === 'maintenance').length} in maintenance`, positive: false, dark: false },
+    { label: 'Resources', value: resources.reduce((s, r) => s + (Number(r.quantity) || 0), 0).toLocaleString(), trend: 'total units', positive: true, dark: false },
+  ];
+
+  const deptData = departments.map((d) => ({
+    ...d,
+    headcount: employees.filter((e) => e.department_id === d.id && e.status === 'active').length,
+    machineCount: machinery.filter((m) => m.department_id === d.id).length,
+  }));
+  const deptHeadcount = [...deptData].sort((a, b) => b.headcount - a.headcount);
+  const chartData = deptData.map((d) => ({
+    month: d.name,
+    employees: d.headcount,
+    machinery: d.machineCount,
+    resources: resources.filter((r) => r.department_id === d.id).length,
+  }));
+  const recentTransfers = transfers.slice(0, 4);
+  const upcomingEvents = [...events]
+    .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+    .slice(0, 4)
+    .map((ev) => ({
+      title: ev.title,
+      date: new Date(ev.event_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+            dept: ev.department_id ? (departments.find((d) => d.id === ev.department_id)?.name || 'Department') : 'All',
+    }));
 
   return (
     <>
@@ -94,7 +109,7 @@ export default function DashboardPage() {
               <span className="dash-card-period">Jan — Aug 2026</span>
             </div>
             <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={CHART_DATA} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradBlack" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#0F0F0F" stopOpacity={0.12} />
@@ -159,12 +174,7 @@ export default function DashboardPage() {
               <h3>Upcoming Events</h3>
             </div>
             <div className="dash-event-list">
-              {[
-                { title: 'New QC Protocol Training', date: 'Aug 28', dept: 'Quality Control' },
-                { title: 'Furnace Maintenance Shutdown', date: 'Sep 5', dept: 'Copper Plant' },
-                { title: 'Rolling Mill Calibration', date: 'Sep 10', dept: 'Rolling Sheet Mill' },
-                { title: 'Annual Safety Audit', date: 'Sep 15', dept: 'All Departments' },
-              ].map((ev, i) => (
+                            {upcomingEvents.map((ev, i) => (
                 <div key={i} className="dash-event-item">
                   <div className="dash-event-date-block">
                     <span className="dash-event-day">{ev.date.split(' ')[1]}</span>

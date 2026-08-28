@@ -1,15 +1,8 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Topbar from '../layouts/Topbar';
-import {
-  DUMMY_DEPARTMENTS,
-  DUMMY_EMPLOYEES,
-  DUMMY_MACHINERY,
-  DUMMY_RESOURCES,
-  DUMMY_EVENTS,
-  DUMMY_DOCUMENTS,
-  DUMMY_TRANSFERS,
-} from '../data/dummyData';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../lib/api';
 import './DepartmentDetailPage.css';
 
 const TABS = ['Employees', 'Machinery', 'Resources', 'Events', 'Documents', 'Transfer History'];
@@ -26,22 +19,110 @@ function StatusBadge({ status }) {
   return <span className={`status-text ${map[status] || 'muted'}`}>{status}</span>;
 }
 
+const BLANK_FORMS = {
+  Employees: { name: '', designation: '', contact_number: '', joining_date: '', status: 'active' },
+  Machinery: { name: '', type: '', status: 'working', purchase_date: '', notes: '' },
+  Resources: { name: '', category: '', quantity: '', unit: '' },
+  Events: { title: '', description: '', event_date: '' },
+  Documents: { title: '', file_url: '' },
+};
+
 export default function DepartmentDetailPage() {
   const { id } = useParams();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState('Employees');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [dept, setDept] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [machinery, setMachinery] = useState([]);
+  const [resources, setResources] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [transfers, setTransfers] = useState([]);
+  const [form, setForm] = useState(BLANK_FORMS.Employees);
+  const [saving, setSaving] = useState(false);
 
-  const dept = DUMMY_DEPARTMENTS.find((d) => d.id === id);
-  if (!dept) return <div className="admin-content"><p>Department not found.</p></div>;
+  async function loadCore() {
+    setLoading(true);
+    setError('');
+    try {
+      const [d, em, m, re] = await Promise.all([
+        api(`/departments/${id}`),
+        api('/employees'),
+        api('/machinery'),
+        api('/resources'),
+      ]);
+      setDept(d);
+      setEmployees((em || []).filter((e) => e.department_id === id));
+      setMachinery((m || []).filter((x) => x.department_id === id));
+      setResources((re || []).filter((r) => r.department_id === id));
+    } catch (err) {
+      setDept(null);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  const employees = DUMMY_EMPLOYEES.filter((e) => e.department_id === id);
-  const machinery = DUMMY_MACHINERY.filter((m) => m.department_id === id);
-  const resources = DUMMY_RESOURCES.filter((r) => r.department_id === id);
-  const events = DUMMY_EVENTS.filter((e) => e.department_id === id || e.department_id === null);
-  const documents = DUMMY_DOCUMENTS.filter((d) => d.department_id === id || d.department_id === null);
-  const transfers = DUMMY_TRANSFERS.filter(
-    (t) => t.from_department_id === id || t.to_department_id === id
-  );
+  async function loadExtras() {
+    try {
+      const [ev, docs, tr] = await Promise.all([
+        api(`/events?department_id=${id}&include_orgwide=true`),
+        api(`/documents?department_id=${id}&include_orgwide=true`),
+        api(`/transfers?department_id=${id}`),
+      ]);
+      setEvents(ev || []);
+      setDocuments(docs || []);
+      setTransfers(tr || []);
+    } catch {
+      /* non-critical */
+    }
+  }
+
+  async function load() {
+    await loadCore();
+    await loadExtras();
+  }
+
+  useEffect(() => {
+    if (id) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  function openAdd() {
+    setError('');
+    setForm(BLANK_FORMS[activeTab] || BLANK_FORMS.Employees);
+    setShowAddModal(true);
+  }
+
+  async function submitAdd(e) {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      const payload = { ...form, department_id: id };
+      let endpoint = '/employees';
+      if (activeTab === 'Machinery') endpoint = '/machinery';
+      else if (activeTab === 'Resources') endpoint = '/resources';
+      else if (activeTab === 'Events') endpoint = '/events';
+      else if (activeTab === 'Documents') endpoint = '/documents';
+      await api(endpoint, { method: 'POST', body: JSON.stringify(payload) });
+      setShowAddModal(false);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const canAdd = isAdmin || activeTab === 'Employees' || activeTab === 'Machinery' || activeTab === 'Resources';
+
+  if (loading) return <div className="admin-content"><div className="data-state">Loading…</div></div>;
+  if (!dept || error) return <div className="admin-content"><div className="data-state">Department not found or unavailable. {error}</div></div>;
 
   return (
     <>
@@ -52,9 +133,11 @@ export default function DepartmentDetailPage() {
             <Link to="/departments" className="dept-detail-back">← All Departments</Link>
             <h1 className="dept-detail-name">{dept.name}</h1>
           </div>
-          <button className="dept-detail-add" onClick={() => setShowAddModal(true)}>
-            + Add {activeTab.slice(0, -1)}
-          </button>
+          {canAdd && (
+            <button className="dept-detail-add" onClick={() => setShowAddModal(true)}>
+              + Add {activeTab === 'Transfer History' ? 'Transfer' : activeTab.slice(0, -1)}
+            </button>
+          )}
         </div>
 
         <div className="dept-tabs">
@@ -232,14 +315,58 @@ export default function DepartmentDetailPage() {
         {showAddModal && (
           <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
             <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-              <h2 className="modal-title">Add New {activeTab.slice(0, -1)}</h2>
-              <div className="modal-dummy-notice">
-                <p>This is a dummy frontend preview.</p>
-                <p>Adding items will be functional once the backend is connected.</p>
-              </div>
-              <div className="modal-actions">
-                <button className="modal-btn primary" onClick={() => setShowAddModal(false)}>Got it</button>
-              </div>
+              <h2 className="modal-title">Add New {activeTab === 'Transfer History' ? 'Transfer' : activeTab.slice(0, -1)}</h2>
+              <form onSubmit={submitAdd} className="modal-form">
+                {activeTab === 'Employees' && (
+                  <>
+                    <div className="modal-field"><label>Name</label><input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
+                    <div className="modal-field"><label>Designation</label><input type="text" value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} /></div>
+                    <div className="modal-field"><label>Contact Number</label><input type="text" value={form.contact_number} onChange={(e) => setForm({ ...form, contact_number: e.target.value })} /></div>
+                    <div className="modal-field"><label>Joining Date</label><input type="date" value={form.joining_date} onChange={(e) => setForm({ ...form, joining_date: e.target.value })} /></div>
+                  </>
+                )}
+                {activeTab === 'Machinery' && (
+                  <>
+                    <div className="modal-field"><label>Name</label><input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
+                    <div className="modal-field"><label>Type</label><input type="text" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} /></div>
+                    <div className="modal-field"><label>Status</label>
+                      <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                        <option value="working">working</option>
+                        <option value="maintenance">maintenance</option>
+                        <option value="idle">idle</option>
+                      </select>
+                    </div>
+                    <div className="modal-field"><label>Purchase Date</label><input type="date" value={form.purchase_date} onChange={(e) => setForm({ ...form, purchase_date: e.target.value })} /></div>
+                    <div className="modal-field"><label>Notes</label><textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+                  </>
+                )}
+                {activeTab === 'Resources' && (
+                  <>
+                    <div className="modal-field"><label>Name</label><input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
+                    <div className="modal-field"><label>Category</label><input type="text" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
+                    <div className="modal-field"><label>Quantity</label><input type="number" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></div>
+                    <div className="modal-field"><label>Unit</label><input type="text" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></div>
+                  </>
+                )}
+                {activeTab === 'Events' && (
+                  <>
+                    <div className="modal-field"><label>Title</label><input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
+                    <div className="modal-field"><label>Description</label><textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+                    <div className="modal-field"><label>Event Date</label><input type="date" value={form.event_date} onChange={(e) => setForm({ ...form, event_date: e.target.value })} /></div>
+                  </>
+                )}
+                {activeTab === 'Documents' && (
+                  <>
+                    <div className="modal-field"><label>Title</label><input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
+                    <div className="modal-field"><label>File URL</label><input type="text" value={form.file_url} onChange={(e) => setForm({ ...form, file_url: e.target.value })} /></div>
+                  </>
+                )}
+                {error && activeTab && <p className="modal-hint" style={{ color: 'var(--red)' }}>⚠ {error}</p>}
+                <div className="modal-actions">
+                  <button type="button" className="modal-btn secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                  <button type="submit" className="modal-btn primary" disabled={saving}>{saving ? 'Saving…' : 'Add'}</button>
+                </div>
+              </form>
             </div>
           </div>
         )}
