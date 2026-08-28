@@ -4,3 +4,13 @@ dist/
 *.log
 .env
 .env.local
+.env.*
+!.env.example
+
+# Secrets / credentials — NEVER commit
+backend/reqs.txt
+backend/.env
+backend/.env.local
+backend/req*.txt
+*.pem
+!*.pem.example

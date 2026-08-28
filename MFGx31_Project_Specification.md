@@ -3,7 +3,7 @@
 **Type:** Multi-tenant SaaS for manufacturing/industrial businesses
 **Stack:** PERN (PostgreSQL via Supabase, Express, React, Node)
 **Frontend Hosting:** Vercel
-**Backend Hosting:** Render
+**Backend Hosting:** Vercel (Express as a Vercel Function)
 **Database & Auth:** Supabase (Postgres + Supabase Auth)
 
 ---
@@ -197,7 +197,7 @@ documents
 
 ---
 
-## 5. Backend (Express on Render)
+## 5. Backend (Express on Vercel)
 
 RESTful API, organized by resource. All routes require a valid Supabase JWT (validated via Supabase service role on the backend). Middleware checks `role` and `organization_id`/`department_id` scope on every request.
 
@@ -271,16 +271,17 @@ mfgx31/
 │   │   ├── components/
 │   │   ├── layouts/         (AdminLayout, DeptHeadLayout)
 │   │   ├── hooks/
-│   │   ├── lib/supabaseClient.js
+│   │   ├── lib/
 │   │   └── App.jsx
 │   └── package.json
-├── server/                 (Express app — deployed to Render)
+├── backend/                (Express app — deployed to Vercel as a Function)
 │   ├── src/
 │   │   ├── routes/
 │   │   ├── middleware/     (auth check, org/dept scoping)
-│   │   ├── controllers/
 │   │   ├── lib/supabaseAdmin.js
+│   │   ├── app.js
 │   │   └── index.js
+│   ├── vercel.json
 │   └── package.json
 └── README.md
 ```
@@ -293,15 +294,15 @@ mfgx31/
 ```
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
-VITE_API_BASE_URL=          # Render backend URL
+VITE_API_BASE_URL=          # Vercel backend API URL
 ```
 
-**Server (Render):**
+**Server (Vercel):**
 ```
 SUPABASE_URL=
+SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-PORT=
-CLIENT_ORIGIN=              # for CORS
+CLIENT_ORIGIN=              # for CORS (frontend Vercel domain + previews)
 ```
 
 ---
@@ -309,15 +310,31 @@ CLIENT_ORIGIN=              # for CORS
 ## 10. Deployment Notes
 
 - **Supabase:** create project, run schema migrations, enable RLS on every table, set up Storage bucket for documents.
-- **Render:** deploy `server/` as a Web Service, set env vars, enable auto-deploy from GitHub.
-- **Vercel:** deploy `client/` as a static/Vite React project, set env vars, connect same GitHub repo.
+- **Vercel — Frontend:** deploy `client/` as a Vite React project, set env vars, connect the same GitHub repo.
+- **Vercel — Backend:** create a second Vercel project pointed at the repo root `backend/`, framework preset "Other"/Node, set env vars, enable auto-deploy from GitHub. The Express app is bundled as a single Vercel Function (Fluid compute).
 - CORS on backend must explicitly allow the Vercel production + preview domains.
+
+### 10.1 Backend on Vercel — Requirements & Caveats
+
+The Express API deploys to Vercel as a **serverless Function** (not a persistent process).
+
+**Structure requirements:**
+- Root file that default-exports the Express `app` (e.g. `backend/src/index.js` → `export default app`). Vercel auto-detects `index.js`, `app.js`, or `server.js` at the root, or via `vercel.json` builds/routes.
+- Do **not** call `app.listen()` at module top level in a way that blocks the serverless runtime. Guard it so local dev still works (e.g. only listen when run directly, not when imported by Vercel).
+- `vercel.json` (optional) can configure functions, routes, and rewrites.
+
+**Known limitations / caveats:**
+- `express.static()` is not supported on Vercel — serve static assets from `public/**` instead. (Not applicable to a pure API.)
+- Serverless **cold starts** apply per invocation; mitigated with Fluid compute but not identical to a persistent process.
+- Per-invocation **execution timeout** applies — fine for REST CRUD + Supabase Auth Admin, not for long-running background jobs or uploads streaming.
+- **Bundle size** limit for the Function (250MB standard) — keep dependencies lean.
+- **Connections:** serverless instances are ephemeral and scale out. Use Supabase's **transaction/connection pooler** or connect via `@supabase/supabase-js` (recommended) rather than a long-lived raw `pg.Pool`. Keep the **`SUPABASE_SERVICE_ROLE_KEY` server-side only** — never expose it to the client; use it for the Auth Admin provisioning flow (section 3.1).
 
 ---
 
 ## 11. MVP Build Order (Recommended Phases)
 
-1. **Phase 1:** Supabase schema + RLS policies, Auth (signup creates org + admin), basic Express server skeleton on Render.
+1. **Phase 1:** Supabase schema + RLS policies, Auth (signup creates org + admin), basic Express server skeleton deployed to Vercel.
 2. **Phase 2:** Landing page + Login/Signup UI (Vercel).
 3. **Phase 3:** Admin Dashboard shell + Department Management (add/remove departments).
 4. **Phase 4:** Department Detail View — Employees, Machinery, Resources CRUD.
