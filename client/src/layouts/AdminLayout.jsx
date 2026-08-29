@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Brand from '../components/Brand';
+import NotificationToasts from '../components/NotificationToasts';
 import './AdminLayout.css';
 
 export default function AdminLayout() {
@@ -33,6 +34,7 @@ export default function AdminLayout() {
         </header>
         <Outlet />
       </main>
+      <NotificationToasts />
     </div>
   );
 }

@@ -104,6 +104,17 @@ export default function DeptResourcePage({ resource }) {
   const [rows, setRows] = useState(() => getCached(config.endpoint) || []);
   const [loading, setLoading] = useState(() => !getCached(config.endpoint));
   const [error, setError] = useState('');
+
+  // When the route switches resources (employees -> machinery) the component
+  // instance is reused, so reset all state synchronously during render to avoid
+  // a stale flash of the previous resource's rows before the skeleton shows.
+  const [prevResource, setPrevResource] = useState(resource);
+  if (prevResource !== resource) {
+    setPrevResource(resource);
+    setRows([]);
+    setLoading(true);
+    setError('');
+  }
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(config.blank);
@@ -129,7 +140,27 @@ export default function DeptResourcePage({ resource }) {
     }
   }
 
-  useEffect(() => { load(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, [resource]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api(config.endpoint);
+        if (cancelled) return;
+        setCached(config.endpoint, data);
+        setRows(data || []);
+        setError('');
+      } catch (err) {
+        if (cancelled) return;
+        setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resource]);
 
   function openAdd() {
     setEditing(null);
@@ -207,6 +238,7 @@ export default function DeptResourcePage({ resource }) {
         {loading && <SkeletonTable rows={5} cols={6} />}
         {!loading && error && <div className="data-state">⚠ {error}</div>}
 
+        {!loading && (
         <div className="dept-resource-card anim-slide-up">
           <table className="dept-resource-table">
             <thead>
@@ -235,6 +267,7 @@ export default function DeptResourcePage({ resource }) {
             </tbody>
           </table>
         </div>
+        )}
 
         {showModal && (
           <div className="modal-overlay" onClick={() => setShowModal(false)}>

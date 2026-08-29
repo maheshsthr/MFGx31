@@ -10,12 +10,24 @@ export default function NotificationBell() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
   const ref = useRef(null);
+  const closeTimer = useRef(null);
 
   const isDept = user?.role === 'department_head';
+
+  // Plays the slide-out animation, then unmounts the panel.
+  const closePanel = useCallback(() => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setClosing(true);
+    closeTimer.current = setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+    }, 230);
+  }, []);
 
   const loadUnread = useCallback(async () => {
     try {
@@ -48,15 +60,21 @@ export default function NotificationBell() {
   // Close the dropdown on outside click.
   useEffect(() => {
     function onDoc(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target)) closePanel();
     }
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
-  }, []);
+  }, [closePanel]);
 
   const toggle = () => {
-    if (!open) loadList();
-    setOpen((o) => !o);
+    if (open) {
+      closePanel();
+    } else {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      setClosing(false);
+      loadList();
+      setOpen(true);
+    }
   };
 
   const resolveLink = (link) => {
@@ -97,12 +115,12 @@ export default function NotificationBell() {
 
   const openFromList = (n) => {
     markRead(n);
-    setOpen(false);
+    closePanel();
     navigate(resolveLink(n.link));
   };
 
   const openAll = () => {
-    setOpen(false);
+    closePanel();
     navigate(isDept ? '/app/notifications' : '/notifications');
   };
 
@@ -114,7 +132,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="notif-panel">
+        <div className={`notif-panel ${closing ? 'closing' : ''}`}>
           <div className="notif-panel-head">
             <span className="notif-panel-title">Notifications</span>
             {notifications.length > 0 && (
